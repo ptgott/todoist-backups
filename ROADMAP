@@ -1,0 +1,7 @@
+# ROADMAP
+
+- Pull from the Todoist API
+- OneDrive authentication
+- Write to OneDrive
+- Ensure that the OneDrive credentials are scoped only to the given directory.
+- Validate the config
