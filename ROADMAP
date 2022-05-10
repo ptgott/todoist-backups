@@ -1,7 +1,9 @@
 # ROADMAP
 
 - Pull from the Todoist API
+- A `oneshot` flag for manually testing the config
 - OneDrive authentication
 - Write to OneDrive
 - Ensure that the OneDrive credentials are scoped only to the given directory.
 - Validate the config
+- Add retries to HTTP requests in the main loop
