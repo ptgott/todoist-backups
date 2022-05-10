@@ -1,9 +1,11 @@
 # ROADMAP
 
-- Pull from the Todoist API
+- Break up the `main` function for easier testing and code replacement.
 - A `oneshot` flag for manually testing the config
-- OneDrive authentication
-- Write to OneDrive
 - Ensure that the OneDrive credentials are scoped only to the given directory.
 - Validate the config
-- Add retries to HTTP requests in the main loop
+- Add retries to HTTP requests in the main loop on 5xx responses
+- Use a logger instead of print statements since this will be running remotely
+- When there are errors, notify me via email. Extract the One Newsletter email package into a separate repo to make this easier. I am guessing that any other daemons I run on VMs will need to notify me as well,
+so this is something that I would benefit from generalizing.
+- Use a mock clock instead of the `time` package and add e2e tests with mocked Todoist and OneDrive servers.

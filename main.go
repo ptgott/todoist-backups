@@ -4,13 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-yaml/yaml"
+	"github.com/ptgott/todoist-backups/todoist"
 )
 
 type Config struct {
@@ -27,18 +28,12 @@ type OneDriveConfig struct {
 	DirectoryPath string `json:"directory_path"`
 }
 
-const todoistBackupURL = "https://api.todoist.com/sync/v8/backups/get"
-
-type AvailableBackups []AvailableBackup
-
-type AvailableBackup struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-}
-
 // The OneDrive simple upload API supports uploads of up to 4MB.
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_put_content
-const oneDriveMaxBytes = 4e6
+const oneDriveMaxBytes int64 = 4e6
+
+// For LimitReaders: 5MB
+const maxResponseBodyBytes int64 = 5e6
 
 const help = `You must provide a -config flag with the path to a config file.
 
@@ -104,7 +99,7 @@ func main() {
 	// Grab a token before entering the main loop to flag any authentication
 	// issues early.
 	ctx := context.Background()
-	t, err := cred.GetToken(ctx, shared.TokenRequestOptions{})
+	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
@@ -126,7 +121,7 @@ func main() {
 		select {
 		case <-k.C:
 			if t.ExpiresOn.After(time.Now()) {
-				t, err := cred.GetToken(ctx, shared.TokenRequestOptions{})
+				t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
 
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
@@ -134,24 +129,22 @@ func main() {
 				}
 			}
 
-			tr1, err := http.NewRequest("GET", todoistBackupURL, nil)
+			ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
 
 			if err != nil {
-				fmt.Fprintln(
-					os.Stderr,
-					"Unable to generate an HTTP request. URL:",
-					todoistBackupURL,
-					"Reason:",
-					err.Error())
+				fmt.Fprintf(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
+				os.Exit(1)
 			}
 
-			tr1.Header.Add("Authorization", "Bearer "+c.TodoistAPIKey)
-			http.DefaultClient.Do(tr1)
+			u, err := todoist.LatestAvailableBackup(ab)
 
-			// TODO: Unmarshal the response into an AvailableBackup
-			// TODO: Pick the latest available backup
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
+				os.Exit(1)
+			}
 
-			// TODO: Grab the latest available backup from Todoist
+			// TODO: Grab the latest available backup ZIP file from Todoist
+
 			// TODO: Send the payload to Microsoft Graph (grabbed the
 			// token already--just need to build the URL path to send the payload to)
 		case <-g:
