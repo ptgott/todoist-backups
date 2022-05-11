@@ -2,8 +2,10 @@ package todoist
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type AvailableBackups []AvailableBackup
@@ -14,6 +16,14 @@ type AvailableBackup struct {
 }
 
 const todoistBackupURL = "https://api.todoist.com/sync/v8/backups/get"
+
+// The format Todoist uses for the timestamp of each backup. Numbers are
+// assigned according to the conventions of the Go time package,
+// https://pkg.go.dev/time
+//
+// See:
+// https://developer.todoist.com/sync/v8/#get-backups
+const todoistTimeFormat = "2006-01-02 15:04"
 
 // GetAvailableBackups queries Todoist's sync API path for listing backups.
 // It handles retries and returns an error either for a client issue or when
@@ -53,6 +63,28 @@ func GetAvailableBackups(token string) (AvailableBackups, error) {
 // LatestAvailableBackup returns a URL that callers can use to retrieve
 // the latest Todoist backup.
 func LatestAvailableBackup(ab AvailableBackups) (string, error) {
-	// TODO: Add unit tests and flesh this out
-	return "", nil
+	if len(ab) == 0 {
+		return "", errors.New("the list of available backups is empty")
+	}
+
+	var latestTime time.Time
+	var latestURL string
+
+	for _, t := range ab {
+		if t.URL == "" {
+			return "", errors.New("the list of possible backups includes a blank URL")
+		}
+
+		m, err := time.Parse(todoistTimeFormat, t.Version)
+
+		if err != nil {
+			return "", err
+		}
+
+		if m.After(latestTime) {
+			latestTime = m
+			latestURL = t.URL
+		}
+	}
+	return latestURL, nil
 }
