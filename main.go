@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -143,7 +144,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			// TODO: Grab the latest available backup ZIP file from Todoist
+			var buf bytes.Buffer
+			b, err := todoist.GetBackup(&buf, c.TodoistAPIKey, u, oneDriveMaxBytes)
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
+				os.Exit(1)
+			}
 
 			// TODO: Send the payload to Microsoft Graph (grabbed the
 			// token already--just need to build the URL path to send the payload to)

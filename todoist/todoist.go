@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -29,15 +30,15 @@ const todoistTimeFormat = "2006-01-02 15:04"
 // It handles retries and returns an error either for a client issue or when
 // all possibilities for retrieving available backups have been exhausted.
 func GetAvailableBackups(token string) (AvailableBackups, error) {
-	tr1, err := http.NewRequest("GET", todoistBackupURL, nil)
+	tr, err := http.NewRequest("GET", todoistBackupURL, nil)
 
 	if err != nil {
 		return AvailableBackups{},
 			fmt.Errorf("unable to generate an HTTP request to %v:%v", todoistBackupURL, err)
 	}
 
-	tr1.Header.Add("Authorization", "Bearer "+token)
-	r1, err := http.DefaultClient.Do(tr1)
+	tr.Header.Add("Authorization", "Bearer "+token)
+	r, err := http.DefaultClient.Do(tr)
 
 	// This error would likely be repeated on subsequent request
 	// attempts. Bail out here so we can fix it.
@@ -46,18 +47,56 @@ func GetAvailableBackups(token string) (AvailableBackups, error) {
 			fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
 	}
 
-	if r1.StatusCode != 200 {
+	if r.StatusCode != 200 {
 		// TODO: Add retries here
-		return AvailableBackups{}, fmt.Errorf("got unexpected response %v", r1.StatusCode)
+		return AvailableBackups{}, fmt.Errorf("got unexpected response %v", r.StatusCode)
 	}
 
 	var ab AvailableBackups
 	// If this doesn't work, we can't proceed!
-	if err := json.NewDecoder(r1.Body).Decode(&ab); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&ab); err != nil {
 		return AvailableBackups{}, fmt.Errorf("unable to parse the available backups: %v", err)
 	}
 
 	return ab, nil
+}
+
+// GetBackup sends a GET request to the Todoist backup URL given in url with
+// the provided bearer token. It writes the downloaded ZIP payload to w and
+// returns the number of bytes downloaded along with any errors. Non-200 error
+// codes will be returned as errors. If the payload reaches maxBytes in size,
+// GetBackup will return an error.
+func GetBackup(w io.Writer, token string, url string, maxBytes int64) (int64, error) {
+	tr, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		return 0,
+			fmt.Errorf("unable to generate an HTTP request to %v:%v", url, err)
+	}
+
+	tr.Header.Add("Authorization", "Bearer "+token)
+	r, err := http.DefaultClient.Do(tr)
+
+	// This error would likely be repeated on subsequent request
+	// attempts. Bail out here so we can fix it.
+	if err != nil {
+		return 0,
+			fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
+	}
+
+	if r.StatusCode != 200 {
+		// TODO: Add retries here
+		return 0, fmt.Errorf("got unexpected response %v", r.StatusCode)
+	}
+
+	lr := io.LimitReader(r.Body, maxBytes)
+	i, err := io.Copy(w, lr)
+
+	if i >= maxBytes {
+		return i, errors.New("backup size exceeded OneDrive upload limit")
+	}
+
+	return i, err
 }
 
 // LatestAvailableBackup returns a URL that callers can use to retrieve
