@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-yaml/yaml"
+	"github.com/ptgott/todoist-backups/onedrive"
 	"github.com/ptgott/todoist-backups/todoist"
 )
 
@@ -83,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Validate the config
+	// TODO: Validate the config.
 
 	cred, err := azidentity.NewClientSecretCredential(
 		c.OneDrive.TenantID,
@@ -145,15 +146,16 @@ func main() {
 			}
 
 			var buf bytes.Buffer
-			b, err := todoist.GetBackup(&buf, c.TodoistAPIKey, u, oneDriveMaxBytes)
-
-			if err != nil {
+			if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
 				fmt.Fprintf(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
 				os.Exit(1)
 			}
 
-			// TODO: Send the payload to Microsoft Graph (grabbed the
-			// token already--just need to build the URL path to send the payload to)
+			if err := onedrive.UploadFile(&buf, t, u.Version); err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
+				os.Exit(1)
+			}
+
 		case <-g:
 			fmt.Fprintln(os.Stderr, "Received interrupt. Stopping.")
 			os.Exit(0)

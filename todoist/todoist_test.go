@@ -6,7 +6,7 @@ func TestLatestAvailableBackup(t *testing.T) {
 	cases := []struct {
 		description string
 		input       AvailableBackups
-		expected    string
+		expected    AvailableBackup
 		expectErr   bool
 	}{
 		{
@@ -29,7 +29,10 @@ func TestLatestAvailableBackup(t *testing.T) {
 					URL:     "https://downloads.example.com/3.zip",
 				},
 			},
-			expected:  "https://downloads.example.com/4.zip",
+			expected: AvailableBackup{
+				Version: "2018-07-13 02:06",
+				URL:     "https://downloads.example.com/4.zip",
+			},
 			expectErr: false,
 		},
 		{
@@ -44,7 +47,7 @@ func TestLatestAvailableBackup(t *testing.T) {
 					URL:     "",
 				},
 			},
-			expected:  "",
+			expected:  AvailableBackup{},
 			expectErr: true,
 		},
 		{
@@ -59,13 +62,13 @@ func TestLatestAvailableBackup(t *testing.T) {
 					URL:     "https://downloads.example.com/2.zip",
 				},
 			},
-			expected:  "",
+			expected:  AvailableBackup{},
 			expectErr: true,
 		},
 		{
 			description: "empty list",
 			input:       AvailableBackups{},
-			expected:    "",
+			expected:    AvailableBackup{},
 			expectErr:   true,
 		},
 		// TODO: Add test cases

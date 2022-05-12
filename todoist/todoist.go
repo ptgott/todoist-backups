@@ -62,16 +62,14 @@ func GetAvailableBackups(token string) (AvailableBackups, error) {
 }
 
 // GetBackup sends a GET request to the Todoist backup URL given in url with
-// the provided bearer token. It writes the downloaded ZIP payload to w and
-// returns the number of bytes downloaded along with any errors. Non-200 error
-// codes will be returned as errors. If the payload reaches maxBytes in size,
-// GetBackup will return an error.
-func GetBackup(w io.Writer, token string, url string, maxBytes int64) (int64, error) {
+// the provided bearer token. It writes the downloaded ZIP payload to w.
+// Non-200 error codes will be returned as errors. If the payload reaches
+// maxBytes in size, GetBackup will return an error.
+func GetBackup(w io.Writer, token string, url string, maxBytes int64) error {
 	tr, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		return 0,
-			fmt.Errorf("unable to generate an HTTP request to %v:%v", url, err)
+		return fmt.Errorf("unable to generate an HTTP request to %v:%v", url, err)
 	}
 
 	tr.Header.Add("Authorization", "Bearer "+token)
@@ -80,50 +78,49 @@ func GetBackup(w io.Writer, token string, url string, maxBytes int64) (int64, er
 	// This error would likely be repeated on subsequent request
 	// attempts. Bail out here so we can fix it.
 	if err != nil {
-		return 0,
-			fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
+		return fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
 	}
 
 	if r.StatusCode != 200 {
 		// TODO: Add retries here
-		return 0, fmt.Errorf("got unexpected response %v", r.StatusCode)
+		return fmt.Errorf("got unexpected response %v", r.StatusCode)
 	}
 
 	lr := io.LimitReader(r.Body, maxBytes)
 	i, err := io.Copy(w, lr)
 
 	if i >= maxBytes {
-		return i, errors.New("backup size exceeded OneDrive upload limit")
+		return errors.New("backup size exceeded OneDrive upload limit")
 	}
 
-	return i, err
+	return err
 }
 
 // LatestAvailableBackup returns a URL that callers can use to retrieve
 // the latest Todoist backup.
-func LatestAvailableBackup(ab AvailableBackups) (string, error) {
+func LatestAvailableBackup(ab AvailableBackups) (AvailableBackup, error) {
 	if len(ab) == 0 {
-		return "", errors.New("the list of available backups is empty")
+		return AvailableBackup{}, errors.New("the list of available backups is empty")
 	}
 
 	var latestTime time.Time
-	var latestURL string
+	var latestAB AvailableBackup
 
 	for _, t := range ab {
 		if t.URL == "" {
-			return "", errors.New("the list of possible backups includes a blank URL")
+			return AvailableBackup{}, errors.New("the list of possible backups includes a blank URL")
 		}
 
 		m, err := time.Parse(todoistTimeFormat, t.Version)
 
 		if err != nil {
-			return "", err
+			return AvailableBackup{}, err
 		}
 
 		if m.After(latestTime) {
 			latestTime = m
-			latestURL = t.URL
+			latestAB = t
 		}
 	}
-	return latestURL, nil
+	return latestAB, nil
 }
