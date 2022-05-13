@@ -98,11 +98,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Grab a token before entering the main loop to flag any authentication
-	// issues early.
-	ctx := context.Background()
-	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
 		os.Exit(1)
@@ -114,45 +109,42 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Could not parse the backup interval:", err.Error())
 		os.Exit(1)
 	}
-	// TODO: Execute a GET request against the Todoist API before the main loop
-	// to help troubleshoot
 
 	k := time.NewTicker(dur)
 
 	for {
 		select {
 		case <-k.C:
-			if t.ExpiresOn.After(time.Now()) {
-				t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
+			ctx := context.Background()
+			t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
 
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
-					os.Exit(1)
-				}
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
+				os.Exit(1)
 			}
 
 			ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
 
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
+				fmt.Fprintln(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
 				os.Exit(1)
 			}
 
 			u, err := todoist.LatestAvailableBackup(ab)
 
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
+				fmt.Fprintln(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
 				os.Exit(1)
 			}
 
 			var buf bytes.Buffer
 			if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
+				fmt.Fprintln(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
 				os.Exit(1)
 			}
 
-			if err := onedrive.UploadFile(&buf, t, u.Version); err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
+			if err := onedrive.UploadFile(&buf, t, c.OneDrive.DirectoryPath+"/"+u.Version); err != nil {
+				fmt.Fprintln(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
 				os.Exit(1)
 			}
 
