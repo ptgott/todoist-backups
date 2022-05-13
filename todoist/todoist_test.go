@@ -71,7 +71,6 @@ func TestLatestAvailableBackup(t *testing.T) {
 			expected:    AvailableBackup{},
 			expectErr:   true,
 		},
-		// TODO: Add test cases
 	}
 
 	for _, tc := range cases {
