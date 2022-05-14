@@ -13,6 +13,30 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 )
 
+type Config struct {
+	TenantID      string `json:"tenant_id"`
+	ClientID      string `json:"client_id"`
+	ClientSecret  string `json:"client_secret"`
+	DirectoryPath string `json:"directory_path"`
+}
+
+// Validate checks the config for errors
+func (c Config) Validate() error {
+	fields := map[string]string{
+		c.DirectoryPath: "directory_path",
+		c.ClientSecret:  "client_secret",
+		c.ClientID:      "client_id",
+		c.TenantID:      "tenant_id",
+	}
+
+	for k, v := range fields {
+		if k == "" {
+			return errors.New("the OneDrive config must include the field: " + v)
+		}
+	}
+	return nil
+}
+
 // See:
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_put_content?view=odsp-graph-online#http-request-to-upload-a-new-file
 const oneDriveUploadPath string = "https://graph.microsoft.com/me/drive/items/root:/%v:/content"

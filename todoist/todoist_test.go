@@ -1,6 +1,8 @@
 package todoist
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestLatestAvailableBackup(t *testing.T) {
 	cases := []struct {

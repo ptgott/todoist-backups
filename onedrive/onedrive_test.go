@@ -1,6 +1,87 @@
 package onedrive
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestConfigValidate(t *testing.T) {
+	cases := []struct {
+		description string
+		conf        Config
+		// Substring the error message is intended to contain. Blank if no
+		// error expected.
+		errSubstr string
+	}{
+		{
+			description: "valid config",
+			conf: Config{
+				TenantID:      "abc123abc123abc123",
+				ClientID:      "abc123abc123abc123",
+				ClientSecret:  "abc123abc123abc123",
+				DirectoryPath: "mydir/file",
+			},
+			errSubstr: "",
+		},
+		{
+			description: "missing directory path",
+			conf: Config{
+				TenantID:     "abc123abc123abc123",
+				ClientID:     "abc123abc123abc123",
+				ClientSecret: "abc123abc123abc123",
+			},
+			errSubstr: "directory_path",
+		},
+		{
+			description: "missing client secret",
+			conf: Config{
+				TenantID:      "abc123abc123abc123",
+				ClientID:      "abc123abc123abc123",
+				DirectoryPath: "mydir/file",
+			},
+			errSubstr: "client_secret",
+		},
+		{
+			description: "missing client ID",
+			conf: Config{
+				TenantID:      "abc123abc123abc123",
+				ClientSecret:  "abc123abc123abc123",
+				DirectoryPath: "mydir/file",
+			},
+			errSubstr: "client_id",
+		},
+		{
+			description: "missing tenant ID",
+			conf: Config{
+				ClientID:      "abc123abc123abc123",
+				ClientSecret:  "abc123abc123abc123",
+				DirectoryPath: "mydir/file",
+			},
+			errSubstr: "tenant_id",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			err := tc.conf.Validate()
+
+			if err != nil && tc.errSubstr == "" {
+				t.Fatalf("expected no error but got %v", err)
+			}
+
+			if err == nil && tc.errSubstr != "" {
+				t.Fatal("expected an error but got nil")
+			}
+
+			if err == nil && tc.errSubstr == "" {
+				return
+			}
+
+			if !strings.Contains(err.Error(), tc.errSubstr) {
+				t.Fatalf("could not find expected substring %q in error message %q", tc.errSubstr, err.Error())
+			}
+		})
+	}
+}
 
 func TestCleanFilename(t *testing.T) {
 	makeLongFilename := func() string {

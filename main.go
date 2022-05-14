@@ -12,22 +12,14 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-yaml/yaml"
+	"github.com/ptgott/todoist-backups/config"
 	"github.com/ptgott/todoist-backups/onedrive"
 	"github.com/ptgott/todoist-backups/todoist"
 )
 
 type Config struct {
-	TodoistAPIKey string         `json:"todoist_api_key"`
-	OneDrive      OneDriveConfig `json:"onedrive"`
-	// Must be a duration string like 1d or 3h
-	BackupInterval string `json:"backup_interval"`
-}
-
-type OneDriveConfig struct {
-	TenantID      string `json:"tenant_id"`
-	ClientID      string `json:"client_id"`
-	ClientSecret  string `json:"client_secret"`
-	DirectoryPath string `json:"directory_path"`
+	config.General
+	OneDrive onedrive.Config `json:"onedrive"`
 }
 
 // The OneDrive simple upload API supports uploads of up to 4MB.
@@ -84,7 +76,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Validate the config.
+	if err := c.General.Validate(); err != nil {
+		fmt.Fprintln(os.Stderr, "Invalid config: "+err.Error())
+		os.Exit(1)
+	}
+
+	if err := c.OneDrive.Validate(); err != nil {
+		fmt.Fprintln(os.Stderr, "Invalid OneDrive config: "+err.Error())
+		os.Exit(1)
+	}
 
 	cred, err := azidentity.NewClientSecretCredential(
 		c.OneDrive.TenantID,
