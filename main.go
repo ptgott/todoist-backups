@@ -50,6 +50,41 @@ onedrive:
 backup_interval: How often to conduct the backup. A duration string like 1m, 
 4h, or 3d.`
 
+func runBackup(cred *azidentity.ClientSecretCredential) {
+	ctx := context.Background()
+	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
+		os.Exit(1)
+	}
+
+	ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
+		os.Exit(1)
+	}
+
+	u, err := todoist.LatestAvailableBackup(ab)
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
+		os.Exit(1)
+	}
+
+	var buf bytes.Buffer
+	if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
+		os.Exit(1)
+	}
+
+	if err := onedrive.UploadFile(&buf, t, c.OneDrive.DirectoryPath+"/"+u.Version); err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
+		os.Exit(1)
+	}
+}
+
 func main() {
 	var g chan os.Signal
 	signal.Notify(g, os.Interrupt)
@@ -110,48 +145,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	k := time.NewTicker(dur)
+	// Run the first backup right away so we can identify issues
+	runBackup(cred)
 
+	k := time.NewTicker(dur)
 	for {
 		select {
 		case <-k.C:
-			ctx := context.Background()
-			t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
-
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
-				os.Exit(1)
-			}
-
-			ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
-
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
-				os.Exit(1)
-			}
-
-			u, err := todoist.LatestAvailableBackup(ab)
-
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
-				os.Exit(1)
-			}
-
-			var buf bytes.Buffer
-			if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
-				os.Exit(1)
-			}
-
-			if err := onedrive.UploadFile(&buf, t, c.OneDrive.DirectoryPath+"/"+u.Version); err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
-				os.Exit(1)
-			}
-
+			runBackup(cred)
 		case <-g:
 			fmt.Fprintln(os.Stderr, "Received interrupt. Stopping.")
 			os.Exit(0)
 		}
-
 	}
 }
