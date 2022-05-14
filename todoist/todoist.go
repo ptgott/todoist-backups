@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/ptgott/todoist-backups/apiclient"
 )
 
 type AvailableBackups []AvailableBackup
@@ -38,18 +40,19 @@ func GetAvailableBackups(token string) (AvailableBackups, error) {
 	}
 
 	tr.Header.Add("Authorization", "Bearer "+token)
-	r, err := http.DefaultClient.Do(tr)
+	r, err := apiclient.DoWithRetries(
+		http.DefaultClient,
+		tr,
+		apiclient.RetryConfig{
+			IntervalBetweenRetries: time.Duration(10) * time.Minute,
+			MaxRetries:             6,
+		})
 
 	// This error would likely be repeated on subsequent request
 	// attempts. Bail out here so we can fix it.
 	if err != nil {
 		return AvailableBackups{},
 			fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
-	}
-
-	if r.StatusCode != 200 {
-		// TODO: Add retries here
-		return AvailableBackups{}, fmt.Errorf("got unexpected response %v", r.StatusCode)
 	}
 
 	var ab AvailableBackups
@@ -73,17 +76,18 @@ func GetBackup(w io.Writer, token string, url string, maxBytes int64) error {
 	}
 
 	tr.Header.Add("Authorization", "Bearer "+token)
-	r, err := http.DefaultClient.Do(tr)
+	r, err := apiclient.DoWithRetries(
+		http.DefaultClient,
+		tr,
+		apiclient.RetryConfig{
+			IntervalBetweenRetries: time.Duration(10) * time.Minute,
+			MaxRetries:             6,
+		})
 
 	// This error would likely be repeated on subsequent request
 	// attempts. Bail out here so we can fix it.
 	if err != nil {
 		return fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
-	}
-
-	if r.StatusCode != 200 {
-		// TODO: Add retries here
-		return fmt.Errorf("got unexpected response %v", r.StatusCode)
 	}
 
 	lr := io.LimitReader(r.Body, maxBytes)

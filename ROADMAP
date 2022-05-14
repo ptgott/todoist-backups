@@ -2,5 +2,4 @@
 
 - Send the first API requests immediately after starting the program (not after the first interval) so we can validate the config easily.
 - Ensure that the OneDrive credentials are scoped only to the given directory.
-- Add retries to HTTP requests in the main loop on 5xx responses
-- Use a logger instead of print statements since this will be running remotely
+- Use a logger instead of print statements since this will be running remotely. Also log whenever a retry is attempted
