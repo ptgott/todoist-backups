@@ -1,4 +1,0 @@
-# ROADMAP
-
-- Ensure that the OneDrive credentials are scoped only to the given directory.
-- Use a logger instead of print statements since this will be running remotely. Also log whenever a retry is attempted
