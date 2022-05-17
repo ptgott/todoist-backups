@@ -50,9 +50,24 @@ onedrive:
 backup_interval: How often to conduct the backup. A duration string like 1m, 
 4h, or 3d.`
 
-func runBackup(cred *azidentity.ClientSecretCredential) {
+func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
+	// Ensure that the OneDrive credentials are scoped only to the given
+	// directory.
+	//
+	// To do this, request authorization for the "Files.ReadWrite.AppFolder"
+	// scope. The user authorizes the app to access their app folder.
+	//
+	// App folders are only compatible with personal OneDrive accounts.
+	// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder
 	ctx := context.Background()
-	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{})
+	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{
+		Scopes: []string{
+			// Added via the SDK:
+			// https://github.com/microsoft/kiota-authentication-azure-go/blob/474cb0d2c8b20401adf95c1d359c59ba4fe565b6/azure_identity_access_token_provider.go#L40
+			"https://graph.microsoft.com/.default",
+			"https://graph.microsoft.com/Files.ReadWrite.AppFolder",
+		},
+	})
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
@@ -133,11 +148,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
-		os.Exit(1)
-	}
-
 	dur, err := time.ParseDuration(c.BackupInterval)
 
 	if err != nil {
@@ -146,13 +156,13 @@ func main() {
 	}
 
 	// Run the first backup right away so we can identify issues
-	runBackup(cred)
+	runBackup(cred, c)
 
 	k := time.NewTicker(dur)
 	for {
 		select {
 		case <-k.C:
-			runBackup(cred)
+			runBackup(cred, c)
 		case <-g:
 			fmt.Fprintln(os.Stderr, "Received interrupt. Stopping.")
 			os.Exit(0)
