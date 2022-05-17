@@ -15,6 +15,7 @@ import (
 	"github.com/ptgott/todoist-backups/config"
 	"github.com/ptgott/todoist-backups/onedrive"
 	"github.com/ptgott/todoist-backups/todoist"
+	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -70,33 +71,28 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 	})
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not retrive an Azure AD auth token:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Could not retrive an Azure AD auth token")
 	}
 
 	ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to grab the available backups from Todoist:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Unable to grab the available backups from Todoist")
 	}
 
 	u, err := todoist.LatestAvailableBackup(ab)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to determine the latest available backup from Todoist:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Unable to determine the latest available backup from Todoist")
 	}
 
 	var buf bytes.Buffer
 	if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to retrieve the latest Todoist backup:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Unable to retrieve the latest Todoist backup")
 	}
 
 	if err := onedrive.UploadFile(&buf, t, c.OneDrive.DirectoryPath+"/"+u.Version); err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to upload a file to OneDrive", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Unable to upload a file to OneDrive")
 	}
 }
 
@@ -115,25 +111,21 @@ func main() {
 	f, err := os.Open(*cf)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not open the config file:", cf)
-		os.Exit(1)
+		log.Fatal().Str("filepath", *cf).Msg("Could not open the config file:")
 	}
 
 	var c Config
 
 	if err := yaml.NewDecoder(f).Decode(&c); err != nil {
-		fmt.Fprintln(os.Stderr, "Could not parse your config file: "+err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Could not parse your config file")
 	}
 
 	if err := c.General.Validate(); err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid config: "+err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Invalid config")
 	}
 
 	if err := c.OneDrive.Validate(); err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid OneDrive config: "+err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Invalid OneDrive config")
 	}
 
 	cred, err := azidentity.NewClientSecretCredential(
@@ -144,27 +136,27 @@ func main() {
 	)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not authenticate with Azure AD:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Could not authenticate with Azure AD")
 	}
 
 	dur, err := time.ParseDuration(c.BackupInterval)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not parse the backup interval:", err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Could not parse the backup interval")
 	}
 
 	// Run the first backup right away so we can identify issues
+	log.Info().Msg("running initial backup")
 	runBackup(cred, c)
 
 	k := time.NewTicker(dur)
 	for {
 		select {
 		case <-k.C:
+			log.Info().Msg("running periodic backup")
 			runBackup(cred, c)
 		case <-g:
-			fmt.Fprintln(os.Stderr, "Received interrupt. Stopping.")
+			log.Info().Msg("Received interrupt. Stopping.")
 			os.Exit(0)
 		}
 	}
