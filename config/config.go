@@ -6,10 +6,10 @@ import (
 )
 
 type General struct {
-	TodoistAPIKey string `json:"todoist_api_key"`
+	TodoistAPIKey string `yaml:"todoist_api_key"`
 
 	// Must be a duration string like 1d or 3h
-	BackupInterval string `json:"backup_interval"`
+	BackupInterval string `yaml:"backup_interval"`
 }
 
 // Validate checks the config for errors

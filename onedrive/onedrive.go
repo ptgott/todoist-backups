@@ -14,9 +14,9 @@ import (
 )
 
 type Config struct {
-	TenantID     string `json:"tenant_id"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	TenantID     string `yaml:"tenant_id"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
 }
 
 // Validate checks the config for errors

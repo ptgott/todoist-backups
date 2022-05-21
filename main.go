@@ -19,8 +19,8 @@ import (
 )
 
 type Config struct {
-	config.General
-	OneDrive onedrive.Config `json:"onedrive"`
+	General  config.General  `yaml:"general"`
+	OneDrive onedrive.Config `yaml:"onedrive"`
 }
 
 // The OneDrive simple upload API supports uploads of up to 4MB.
@@ -35,7 +35,12 @@ You must provide a -config flag with the path to a config file.
 
 The config file must include the following options in YAML format:
 
-todoist_api_key: the API key retrieved from Todoist
+general:
+
+	todoist_api_key: the API key retrieved from Todoist
+
+	backup_interval: How often to conduct the backup. A duration string like 1m, 
+	4h, or 3d.
 
 onedrive:
 	tenant_id: Microsoft Graph tenant ID
@@ -48,9 +53,6 @@ onedrive:
 	to.
 
 	The Todoist backup job will be limited to this directory.
-
-backup_interval: How often to conduct the backup. A duration string like 1m, 
-4h, or 3d.
 
 You can optionally use the -oneshot flag to create a single backup without
 running the job as a daemon.
@@ -79,7 +81,7 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 		log.Fatal().Err(err).Msg("Could not retrive an Azure AD auth token")
 	}
 
-	ab, err := todoist.GetAvailableBackups(c.TodoistAPIKey)
+	ab, err := todoist.GetAvailableBackups(c.General.TodoistAPIKey)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Unable to grab the available backups from Todoist")
@@ -92,7 +94,7 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 	}
 
 	var buf bytes.Buffer
-	if err := todoist.GetBackup(&buf, c.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
+	if err := todoist.GetBackup(&buf, c.General.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
 		log.Fatal().Err(err).Msg("Unable to retrieve the latest Todoist backup")
 	}
 
@@ -102,7 +104,7 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 }
 
 func main() {
-	var g chan os.Signal
+	g := make(chan os.Signal, 1)
 	signal.Notify(g, os.Interrupt)
 
 	oneshot := flag.Bool("oneshot", false, "whether to run one backup and exit")
@@ -145,7 +147,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Could not authenticate with Azure AD")
 	}
 
-	dur, err := time.ParseDuration(c.BackupInterval)
+	dur, err := time.ParseDuration(c.General.BackupInterval)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not parse the backup interval")
