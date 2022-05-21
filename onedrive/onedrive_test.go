@@ -16,46 +16,33 @@ func TestConfigValidate(t *testing.T) {
 		{
 			description: "valid config",
 			conf: Config{
-				TenantID:      "abc123abc123abc123",
-				ClientID:      "abc123abc123abc123",
-				ClientSecret:  "abc123abc123abc123",
-				DirectoryPath: "mydir/file",
-			},
-			errSubstr: "",
-		},
-		{
-			description: "missing directory path",
-			conf: Config{
 				TenantID:     "abc123abc123abc123",
 				ClientID:     "abc123abc123abc123",
 				ClientSecret: "abc123abc123abc123",
 			},
-			errSubstr: "directory_path",
+			errSubstr: "",
 		},
 		{
 			description: "missing client secret",
 			conf: Config{
-				TenantID:      "abc123abc123abc123",
-				ClientID:      "abc123abc123abc123",
-				DirectoryPath: "mydir/file",
+				TenantID: "abc123abc123abc123",
+				ClientID: "abc123abc123abc123",
 			},
 			errSubstr: "client_secret",
 		},
 		{
 			description: "missing client ID",
 			conf: Config{
-				TenantID:      "abc123abc123abc123",
-				ClientSecret:  "abc123abc123abc123",
-				DirectoryPath: "mydir/file",
+				TenantID:     "abc123abc123abc123",
+				ClientSecret: "abc123abc123abc123",
 			},
 			errSubstr: "client_id",
 		},
 		{
 			description: "missing tenant ID",
 			conf: Config{
-				ClientID:      "abc123abc123abc123",
-				ClientSecret:  "abc123abc123abc123",
-				DirectoryPath: "mydir/file",
+				ClientID:     "abc123abc123abc123",
+				ClientSecret: "abc123abc123abc123",
 			},
 			errSubstr: "tenant_id",
 		},

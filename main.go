@@ -96,7 +96,7 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 		log.Fatal().Err(err).Msg("Unable to retrieve the latest Todoist backup")
 	}
 
-	if err := onedrive.UploadFile(&buf, t, c.OneDrive.DirectoryPath+"/"+u.Version); err != nil {
+	if err := onedrive.UploadFile(&buf, t, u.Version); err != nil {
 		log.Fatal().Err(err).Msg("Unable to upload a file to OneDrive")
 	}
 }

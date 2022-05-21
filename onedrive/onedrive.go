@@ -14,19 +14,17 @@ import (
 )
 
 type Config struct {
-	TenantID      string `json:"tenant_id"`
-	ClientID      string `json:"client_id"`
-	ClientSecret  string `json:"client_secret"`
-	DirectoryPath string `json:"directory_path"`
+	TenantID     string `json:"tenant_id"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 // Validate checks the config for errors
 func (c Config) Validate() error {
 	fields := map[string]string{
-		c.DirectoryPath: "directory_path",
-		c.ClientSecret:  "client_secret",
-		c.ClientID:      "client_id",
-		c.TenantID:      "tenant_id",
+		c.ClientSecret: "client_secret",
+		c.ClientID:     "client_id",
+		c.TenantID:     "tenant_id",
 	}
 
 	for k, v := range fields {
@@ -37,9 +35,13 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// Upload path to use for new content
 // See:
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_put_content?view=odsp-graph-online#http-request-to-upload-a-new-file
-const oneDriveUploadPath string = "https://graph.microsoft.com/me/drive/items/root:/%v:/content"
+// We are creating an App Folder, so we need to specify this URL path.
+// See:
+// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder#creating-your-apps-folder
+const oneDriveUploadPath string = "/drive/special/approot:/%v:/content"
 
 // UploadFile sends a request to the OneDrive API to upload the file in body.
 // Filename must be relative to the root of your OneDrive file tree, and must
