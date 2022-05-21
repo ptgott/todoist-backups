@@ -56,6 +56,12 @@ onedrive:
 
 You can optionally use the -oneshot flag to create a single backup without
 running the job as a daemon.
+
+Note that when registering this app with Azure Active Directory, you
+must specify the account type as,
+"Accounts in this organizational directory only (Default Directory only - 
+Single tenant)". Otherwise, authentication against Microsoft Identity Platform
+will fail due to using unsupported API paths for authentication.
 `
 
 func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
@@ -73,7 +79,6 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 			// Added via the SDK:
 			// https://github.com/microsoft/kiota-authentication-azure-go/blob/474cb0d2c8b20401adf95c1d359c59ba4fe565b6/azure_identity_access_token_provider.go#L40
 			"https://graph.microsoft.com/.default",
-			"https://graph.microsoft.com/Files.ReadWrite.AppFolder",
 		},
 	})
 

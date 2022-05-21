@@ -34,10 +34,10 @@ send:
 		}
 		return resp, fmt.Errorf("the request to %v failed after %v retries", req.URL.String(), f.MaxRetries)
 	case 400:
-		return resp, fmt.Errorf("got client error %v", resp.StatusCode)
+		return resp, fmt.Errorf("got client error %v for URL %v", resp.StatusCode, req.URL)
 	case 200:
 		return resp, nil
 	default:
-		return resp, fmt.Errorf("got unexpected response code %v", resp.StatusCode)
+		return resp, fmt.Errorf("got unexpected response code %v for URL %v", resp.StatusCode, req.URL)
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -41,7 +40,7 @@ func (c Config) Validate() error {
 // We are creating an App Folder, so we need to specify this URL path.
 // See:
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder#creating-your-apps-folder
-const oneDriveUploadPath string = "/drive/special/approot:/%v:/content"
+const oneDriveUploadPath string = "https://graph.microsoft.com/drive/special/approot:/%v:/content"
 
 // UploadFile sends a request to the OneDrive API to upload the file in body.
 // Filename must be relative to the root of your OneDrive file tree, and must
@@ -70,7 +69,11 @@ func UploadFile(body io.Reader, k *azcore.AccessToken, filename string) error {
 	}
 
 	if resp.StatusCode != 201 {
-		return errors.New("got unexpected response code: " + strconv.Itoa(resp.StatusCode))
+		return fmt.Errorf(
+			"got unexpected response code %v for URL %v",
+			resp.StatusCode,
+			req.URL,
+		)
 	}
 
 	return nil
