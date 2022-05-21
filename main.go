@@ -30,7 +30,8 @@ const oneDriveMaxBytes int64 = 4e6
 // For LimitReaders: 5MB
 const maxResponseBodyBytes int64 = 5e6
 
-const help = `You must provide a -config flag with the path to a config file.
+const help = `
+You must provide a -config flag with the path to a config file.
 
 The config file must include the following options in YAML format:
 
@@ -49,7 +50,11 @@ onedrive:
 	The Todoist backup job will be limited to this directory.
 
 backup_interval: How often to conduct the backup. A duration string like 1m, 
-4h, or 3d.`
+4h, or 3d.
+
+You can optionally use the -oneshot flag to create a single backup without
+running the job as a daemon.
+`
 
 func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 	// Ensure that the OneDrive credentials are scoped only to the given
@@ -100,11 +105,12 @@ func main() {
 	var g chan os.Signal
 	signal.Notify(g, os.Interrupt)
 
+	oneshot := flag.Bool("oneshot", false, "whether to run one backup and exit")
 	cf := flag.String("config", "", "the path to a configuration file")
 	flag.Parse()
 
 	if *cf == "" {
-		fmt.Println(help)
+		fmt.Print(help)
 		os.Exit(1)
 	}
 
@@ -148,6 +154,11 @@ func main() {
 	// Run the first backup right away so we can identify issues
 	log.Info().Msg("running initial backup")
 	runBackup(cred, c)
+
+	if *oneshot {
+		log.Info().Msg("oneshot selected, exiting")
+		os.Exit(0)
+	}
 
 	k := time.NewTicker(dur)
 	for {
