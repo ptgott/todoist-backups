@@ -42,7 +42,7 @@ func (c Config) Validate() error {
 // We are creating an App Folder, so we need to specify this URL path.
 // See:
 // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder#creating-your-apps-folder
-const oneDriveUploadPath string = "https://graph.microsoft.com/drive/special/approot:/%v:/content"
+const oneDriveUploadPath string = "https://graph.microsoft.com/v1.0/drive/special/approot:/%v:/content"
 
 // UploadFile sends a request to the OneDrive API to upload the file in body.
 // Filename must be relative to the root of your OneDrive file tree, and must

@@ -83,7 +83,7 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 	})
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not retrive an Azure AD auth token")
+		log.Fatal().Err(err).Msg("Could not retrieve an Azure AD auth token")
 	}
 
 	ab, err := todoist.GetAvailableBackups(c.General.TodoistAPIKey)
