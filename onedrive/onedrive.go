@@ -1,6 +1,7 @@
 package onedrive
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -78,10 +79,14 @@ func UploadFile(body io.Reader, k *azcore.AccessToken, filename string) error {
 	}
 
 	if resp.StatusCode != 201 {
+		var b bytes.Buffer
+		b.ReadFrom(resp.Body)
+
 		return fmt.Errorf(
-			"got unexpected response code %v for URL %v",
+			"got unexpected response code %v for URL %v with body: %q",
 			resp.StatusCode,
 			req.URL,
+			b.String(),
 		)
 	}
 

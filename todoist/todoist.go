@@ -48,11 +48,13 @@ func GetAvailableBackups(token string) (AvailableBackups, error) {
 			MaxRetries:             6,
 		})
 
-	// This error would likely be repeated on subsequent request
-	// attempts. Bail out here so we can fix it.
 	if err != nil {
 		return AvailableBackups{},
 			fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
+	}
+
+	if r.StatusCode != 200 {
+		return AvailableBackups{}, fmt.Errorf("got client error %v for URL %v", r.StatusCode, tr.URL)
 	}
 
 	var ab AvailableBackups
@@ -84,10 +86,12 @@ func GetBackup(w io.Writer, token string, url string, maxBytes int64) error {
 			MaxRetries:             6,
 		})
 
-	// This error would likely be repeated on subsequent request
-	// attempts. Bail out here so we can fix it.
 	if err != nil {
 		return fmt.Errorf("unexpected response while grabbing the latest Todoist backups: %v", err)
+	}
+
+	if r.StatusCode != 200 {
+		return fmt.Errorf("got client error %v for URL %v", r.StatusCode, tr.URL)
 	}
 
 	lr := io.LimitReader(r.Body, maxBytes)

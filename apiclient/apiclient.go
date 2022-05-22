@@ -12,7 +12,8 @@ type RetryConfig struct {
 }
 
 // DoWithRetries sends req, retrying on 5xx errors using the provided
-// RetryConfig. Returns na error on non-2xx responses.
+// RetryConfig. It returns the response to the caller and does not return
+// an error on non-2xx responses unless retrying has failed on a 5xx response.
 func DoWithRetries(c *http.Client, req *http.Request, f RetryConfig) (*http.Response, error) {
 	remaining := f.MaxRetries
 
@@ -33,11 +34,7 @@ send:
 			goto send
 		}
 		return resp, fmt.Errorf("the request to %v failed after %v retries", req.URL.String(), f.MaxRetries)
-	case 400:
-		return resp, fmt.Errorf("got client error %v for URL %v", resp.StatusCode, req.URL)
-	case 200:
-		return resp, nil
 	default:
-		return resp, fmt.Errorf("got unexpected response code %v for URL %v", resp.StatusCode, req.URL)
+		return resp, nil
 	}
 }
