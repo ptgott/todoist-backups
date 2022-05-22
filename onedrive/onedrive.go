@@ -8,8 +8,10 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/ptgott/todoist-backups/apiclient"
 )
 
 type Config struct {
@@ -62,7 +64,14 @@ func UploadFile(body io.Reader, k *azcore.AccessToken, filename string) error {
 	}
 
 	req.Header.Add("Authorization", "Bearer "+k.Token)
-	resp, err := http.DefaultClient.Do(req)
+
+	resp, err := apiclient.DoWithRetries(
+		http.DefaultClient,
+		req,
+		apiclient.RetryConfig{
+			IntervalBetweenRetries: time.Duration(10) * time.Minute,
+			MaxRetries:             6,
+		})
 
 	if err != nil {
 		return err
@@ -117,6 +126,10 @@ func cleanFilename(filename string) (string, error) {
 		if bn.MatchString(p) {
 			return "", errors.New("filepath contains disallowed file/folder name: " + p)
 		}
+	}
+
+	if !strings.HasSuffix(s, ".zip") {
+		s = s + ".zip"
 	}
 
 	return s, nil

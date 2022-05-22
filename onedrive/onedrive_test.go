@@ -88,8 +88,8 @@ func TestCleanFilename(t *testing.T) {
 	}{
 		{
 			description: "Todoist backup name",
-			input:       "backups/2018-07-13 02:05",
-			want:        "backups/2018-07-13 02_05",
+			input:       "backups/2018-07-13 02:05.zip",
+			want:        "backups/2018-07-13 02_05.zip",
 			wantErr:     false,
 		},
 		{
@@ -106,8 +106,8 @@ func TestCleanFilename(t *testing.T) {
 		},
 		{
 			description: "Disallowed OneDrive characters",
-			input:       "backups/this*is:\"a<bad>file?name\\to|use",
-			want:        "backups/this_is__a_bad_file_name_to_use",
+			input:       "backups/this*is:\"a<bad>file?name\\to|use.zip",
+			want:        "backups/this_is__a_bad_file_name_to_use.zip",
 			wantErr:     false,
 		},
 		{
@@ -139,6 +139,12 @@ func TestCleanFilename(t *testing.T) {
 			input:       "backups/LPT3/today_vti_",
 			want:        "",
 			wantErr:     true,
+		},
+		{
+			description: "Legal filename without a trailing .zip",
+			input:       "myfile",
+			want:        "myfile.zip",
+			wantErr:     false,
 		},
 	}
 
