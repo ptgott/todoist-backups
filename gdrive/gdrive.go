@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -23,12 +24,15 @@ type Config struct {
 	// Path to a token file, which Google Workspace creates when you complete
 	// the authorization flow.
 	TokenPath string `yaml:"token_path"`
+	// Folder where Todoist backups will be stored. This will be created at the
+	// root of the Google Drive if it does not already exist.
+	FolderName string `yaml:"folder_name"`
 }
 
 // Validate checks the Config for errors and returns the first one it finds.
 func (c Config) Validate() error {
-	if c.CredentialsPath == "" || c.TokenPath == "" {
-		return errors.New("must provide both a credentials_path and a token_path")
+	if c.CredentialsPath == "" || c.TokenPath == "" || c.FolderName == "" {
+		return errors.New("must provide a folder_name, credentials_path, and token_path")
 	}
 
 	if _, err := os.Stat(c.CredentialsPath); err != nil {
@@ -66,9 +70,9 @@ func getClient(config *oauth2.Config, path string) (*http.Client, error) {
 //
 // UploadFile creates a Google Drive API client using the token file at tokPath
 // and credentials file at credPath.
-func UploadFile(r io.Reader, filename string, tokPath string, credPath string) error {
+func UploadFile(r io.Reader, filename string, c Config) error {
 	ctx := context.Background()
-	b, err := ioutil.ReadFile(credPath)
+	b, err := ioutil.ReadFile(c.CredentialsPath)
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
@@ -79,7 +83,7 @@ func UploadFile(r io.Reader, filename string, tokPath string, credPath string) e
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-	client, err := getClient(config, tokPath)
+	client, err := getClient(config, c.TokenPath)
 
 	if err != nil {
 		return err
@@ -90,9 +94,46 @@ func UploadFile(r io.Reader, filename string, tokPath string, credPath string) e
 		log.Fatalf("Unable to retrieve Drive client: %v", err)
 	}
 
+	var d string // the ID of the directory to write to
+
+	l, err := srv.Files.List().Q(fmt.Sprintf("name='%v'", c.FolderName)).Do()
+
+	if err != nil {
+		return err
+	}
+
+	switch len(l.Files) {
+	case 0:
+		// Create a folder for your backups since it does not already exist
+		s, err := srv.Files.Create(
+			&drive.File{
+				Name: c.FolderName,
+				// Indicate that this is a new folder. See:
+				// https://developers.google.com/drive/api/guides/folder#create_a_folder
+				MimeType: "application/vnd.google-apps.folder",
+			},
+		).Context(ctx).Do()
+
+		if err != nil {
+			return err
+		}
+
+		d = s.Id
+	case 1:
+		// Use the ID of the existing folder
+		d = l.Files[0].Id
+	default:
+		return fmt.Errorf(
+			"unexpected number of Todoist backup folders: %v files named %q",
+			len(l.Files),
+			c.FolderName,
+		)
+	}
+
 	if _, err := srv.Files.Create(&drive.File{
 		MimeType: "application/zip",
 		Name:     filename,
+		Parents:  []string{d},
 	}).Media(r).Context(ctx).Do(); err != nil {
 		return err
 	}

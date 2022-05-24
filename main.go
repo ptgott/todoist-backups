@@ -42,8 +42,8 @@ google_drive:
 	credentials_path: path to a Google Workspace credentials file, which you
 	can export for the service account that you created for this app.
 
-	directory_path: path to the Google Drive directory you want to write 
-	backups to.
+	folder_name: name of the Google Drive directory you want to write 
+	backups to. This will be a single folder at the root of your Drive.
 
 	The Todoist backup job will be limited to this directory.
 
@@ -72,10 +72,9 @@ func runBackup(c Config) {
 	if err := gdrive.UploadFile(
 		&buf,
 		u.Version,
-		c.GoogleDrive.TokenPath,
-		c.GoogleDrive.CredentialsPath,
+		c.GoogleDrive,
 	); err != nil {
-		log.Fatal().Err(err).Msg("Unable to upload a file to OneDrive")
+		log.Fatal().Err(err).Msg("Unable to upload a file to Google Drive")
 	}
 }
 
@@ -109,7 +108,7 @@ func main() {
 	}
 
 	if err := c.GoogleDrive.Validate(); err != nil {
-		log.Fatal().Err(err).Msg("Invalid OneDrive config")
+		log.Fatal().Err(err).Msg("Invalid Google Drive config")
 	}
 
 	dur, err := time.ParseDuration(c.General.BackupInterval)

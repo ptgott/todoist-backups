@@ -98,7 +98,7 @@ func GetBackup(w io.Writer, token string, url string, maxBytes int64) error {
 	i, err := io.Copy(w, lr)
 
 	if i >= maxBytes {
-		return errors.New("backup size exceeded OneDrive upload limit")
+		return errors.New("backup size exceeded upload limit")
 	}
 
 	return err
