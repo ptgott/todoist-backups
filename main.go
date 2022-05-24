@@ -2,30 +2,23 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-yaml/yaml"
 	"github.com/ptgott/todoist-backups/config"
-	"github.com/ptgott/todoist-backups/onedrive"
+	"github.com/ptgott/todoist-backups/gdrive"
 	"github.com/ptgott/todoist-backups/todoist"
 	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
-	General  config.General  `yaml:"general"`
-	OneDrive onedrive.Config `yaml:"onedrive"`
+	General     config.General `yaml:"general"`
+	GoogleDrive gdrive.Config  `yaml:"google_drive"`
 }
-
-// The OneDrive simple upload API supports uploads of up to 4MB.
-// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_put_content
-const oneDriveMaxBytes int64 = 4e6
 
 // For LimitReaders: 5MB
 const maxResponseBodyBytes int64 = 5e6
@@ -42,50 +35,23 @@ general:
 	backup_interval: How often to conduct the backup. A duration string like 1m, 
 	4h, or 3d.
 
-onedrive:
-	tenant_id: Microsoft Graph tenant ID
+google_drive:
+	token_path: path to your Google Workspace token file, which is created when
+	you first complete the authorization flow.
 
-	client_id: Microsoft Graph client ID
+	credentials_path: path to a Google Workspace credentials file, which you
+	can export for the service account that you created for this app.
 
-	client_secret: Microsoft Graph client secret
-
-	directory_path: path to the OneDrive directory you want to write backups
-	to.
+	directory_path: path to the Google Drive directory you want to write 
+	backups to.
 
 	The Todoist backup job will be limited to this directory.
 
 You can optionally use the -oneshot flag to create a single backup without
 running the job as a daemon.
-
-Note that when registering this app with Azure Active Directory, you
-must specify the account type as,
-"Accounts in this organizational directory only (Default Directory only - 
-Single tenant)". Otherwise, authentication against Microsoft Identity Platform
-will fail due to using unsupported API paths for authentication.
 `
 
-func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
-	// Ensure that the OneDrive credentials are scoped only to the given
-	// directory.
-	//
-	// To do this, request authorization for the "Files.ReadWrite.AppFolder"
-	// scope. The user authorizes the app to access their app folder.
-	//
-	// App folders are only compatible with personal OneDrive accounts.
-	// https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder
-	ctx := context.Background()
-	t, err := cred.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{
-			// Added via the SDK:
-			// https://github.com/microsoft/kiota-authentication-azure-go/blob/474cb0d2c8b20401adf95c1d359c59ba4fe565b6/azure_identity_access_token_provider.go#L40
-			"https://graph.microsoft.com/.default",
-		},
-	})
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("Could not retrieve an Azure AD auth token")
-	}
-
+func runBackup(c Config) {
 	ab, err := todoist.GetAvailableBackups(c.General.TodoistAPIKey)
 
 	if err != nil {
@@ -99,11 +65,16 @@ func runBackup(cred *azidentity.ClientSecretCredential, c Config) {
 	}
 
 	var buf bytes.Buffer
-	if err := todoist.GetBackup(&buf, c.General.TodoistAPIKey, u.URL, oneDriveMaxBytes); err != nil {
+	if err := todoist.GetBackup(&buf, c.General.TodoistAPIKey, u.URL, maxResponseBodyBytes); err != nil {
 		log.Fatal().Err(err).Msg("Unable to retrieve the latest Todoist backup")
 	}
 
-	if err := onedrive.UploadFile(&buf, t, u.Version); err != nil {
+	if err := gdrive.UploadFile(
+		&buf,
+		u.Version,
+		c.GoogleDrive.TokenPath,
+		c.GoogleDrive.CredentialsPath,
+	); err != nil {
 		log.Fatal().Err(err).Msg("Unable to upload a file to OneDrive")
 	}
 }
@@ -137,19 +108,8 @@ func main() {
 		log.Fatal().Err(err).Msg("Invalid config")
 	}
 
-	if err := c.OneDrive.Validate(); err != nil {
+	if err := c.GoogleDrive.Validate(); err != nil {
 		log.Fatal().Err(err).Msg("Invalid OneDrive config")
-	}
-
-	cred, err := azidentity.NewClientSecretCredential(
-		c.OneDrive.TenantID,
-		c.OneDrive.ClientID,
-		c.OneDrive.ClientSecret,
-		nil,
-	)
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("Could not authenticate with Azure AD")
 	}
 
 	dur, err := time.ParseDuration(c.General.BackupInterval)
@@ -160,7 +120,7 @@ func main() {
 
 	// Run the first backup right away so we can identify issues
 	log.Info().Msg("running initial backup")
-	runBackup(cred, c)
+	runBackup(c)
 
 	if *oneshot {
 		log.Info().Msg("oneshot selected, exiting")
@@ -172,7 +132,7 @@ func main() {
 		select {
 		case <-k.C:
 			log.Info().Msg("running periodic backup")
-			runBackup(cred, c)
+			runBackup(c)
 		case <-g:
 			log.Info().Msg("Received interrupt. Stopping.")
 			os.Exit(0)
