@@ -36,11 +36,10 @@ general:
 	4h, or 3d.
 
 google_drive:
-	token_path: path to your Google Workspace token file, which is created when
-	you first complete the authorization flow.
 
 	credentials_path: path to a Google Workspace credentials file, which you
-	can export for the service account that you created for this app.
+	can export for the service account that you created for this app. This must
+	be a service account credentials file, rather than an OAuth2.0 token.
 
 	folder_name: name of the Google Drive directory you want to write 
 	backups to. This will be a single folder at the root of your Drive.
