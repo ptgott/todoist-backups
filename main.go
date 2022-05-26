@@ -42,7 +42,7 @@ google_drive:
 	be a service account credentials file, rather than an OAuth2.0 token.
 
 	folder_name: name of the Google Drive directory you want to write 
-	backups to. This will be a single folder at the root of your Drive.
+	backups to.
 
 	The Todoist backup job will be limited to this directory.
 
