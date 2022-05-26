@@ -46,6 +46,10 @@ google_drive:
 
 	The Todoist backup job will be limited to this directory.
 
+	Note that this directory must be shared with the service account you create
+	for Todoist backups. The service account's email address will be provided
+	on creation.
+
 You can optionally use the -oneshot flag to create a single backup without
 running the job as a daemon.
 `

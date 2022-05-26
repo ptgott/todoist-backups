@@ -36,7 +36,8 @@ func (c Config) Validate() error {
 }
 
 // UploadFile uploads the file in r to Google Drive with the provided name.
-// It modifies the filename to remove invalid characters before uploading.
+// The containing folder (Config.FolderName) must exist and be shared
+// with the Todoist backupos service account prior to the upload.
 func UploadFile(r io.Reader, filename string, c Config) error {
 	ctx := context.Background()
 
@@ -55,21 +56,7 @@ func UploadFile(r io.Reader, filename string, c Config) error {
 
 	switch len(l.Files) {
 	case 0:
-		// Create a folder for your backups since it does not already exist
-		s, err := srv.Files.Create(
-			&drive.File{
-				Name: c.FolderName,
-				// Indicate that this is a new folder. See:
-				// https://developers.google.com/drive/api/guides/folder#create_a_folder
-				MimeType: "application/vnd.google-apps.folder",
-			},
-		).Context(ctx).Do()
-
-		if err != nil {
-			return err
-		}
-
-		d = s.Id
+		return fmt.Errorf("could not find backup folder %q", c.FolderName)
 	case 1:
 		// Use the ID of the existing folder
 		d = l.Files[0].Id
