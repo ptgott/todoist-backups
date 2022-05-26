@@ -1,2 +1,3 @@
 # Ignore config files
 *.yaml
+*.json

@@ -79,6 +79,7 @@ func runBackup(c Config) {
 	); err != nil {
 		log.Fatal().Err(err).Msg("Unable to upload a file to Google Drive")
 	}
+	log.Info().Msg("Todoist backup succeeded")
 }
 
 func main() {
