@@ -98,7 +98,7 @@ func main() {
 	f, err := os.Open(*cf)
 
 	if err != nil {
-		log.Fatal().Str("filepath", *cf).Msg("Could not open the config file:")
+		log.Fatal().Str("filepath", *cf).Err(err).Msg("Could not open the config file")
 	}
 
 	var c Config

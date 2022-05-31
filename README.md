@@ -2,16 +2,6 @@
 
 This is a program for backing up Todoist data on Google Drive.
 
-## Build the backup job
-
-Download Go version 1.18+ and run the following command:
-
-```bash
-$ go build -o tbackups main.go
-```
-
-Add `tbackups` to your `PATH`.
-
 ## Create a service account
 
 The Todoist backup job authenticates to the Google Drive API via a Google
@@ -21,11 +11,40 @@ Follow [these instructions](https://developers.google.com/workspace/guides/creat
 
 ## Run the backup job
 
+There are two ways to run the backup job.
+
+### Execute a binary
+
+Download Go version 1.18+ and run the following command:
+
+```bash
+$ go build -o tbackups main.go
+```
+
+Add `tbackups` to your `PATH`.
+
+
+Run the following command:
+
 ```bash
 $ tbackups -config=config.yaml [-oneshot]
 ```
 
-You must provide a `-config` flag with the path to a config file.
+You must provide a `-config` flag with the path to a config file, which is explained in the next section.
+
+### Run a container
+
+You can run the Todoist backup job as a container:
+
+```bash
+$ CONFIG_PATH=<absolute path to config>;
+$ CREDENTIALS_PATH=<absolute path to credentials file>;
+$ docker run -v $CONFIG_PATH:/config.yaml -v $CREDENTIALS_PATH:/credentials.json ptgott/todoist-backups:0.10 -config=/config.yaml;
+```
+
+Make sure that your config file's `credentials_path` field points to the location of your credentials file _within the container_.
+
+## Config file
 
 The config file must include the following options in YAML format:
 
