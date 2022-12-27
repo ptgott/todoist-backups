@@ -18,7 +18,7 @@ type AvailableBackup struct {
 	URL     string `json:"url"`
 }
 
-const todoistBackupURL = "https://api.todoist.com/sync/v8/backups/get"
+const todoistBackupURL = "https://api.todoist.com/sync/v9/backups/get"
 
 // The format Todoist uses for the timestamp of each backup. Numbers are
 // assigned according to the conventions of the Go time package,
