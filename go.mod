@@ -1,6 +1,6 @@
 module github.com/ptgott/todoist-backups
 
-go 1.18
+go 1.20
 
 require (
 	github.com/go-yaml/yaml v2.1.0+incompatible
